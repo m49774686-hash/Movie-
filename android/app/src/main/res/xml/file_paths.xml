@@ -1,0 +1,6 @@
+<paths>
+    <!-- <external-path name="external_files" path="Android/data/com.example.moviezone/files/" /> -->
+    <external-path name="external_files" path="Android/data/com.surya.moviezone.moviezone/files/" />
+    <external-path name="external_files" path="Android/data/com.surya.moviezone.moviezone/app_flutter/downloads/" />
+    <files-path name="internal_files" path="." />
+</paths>

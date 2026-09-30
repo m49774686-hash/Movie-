@@ -1,0 +1,99 @@
+name: moviezone
+description: "MovieZone OTT application."
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+# flutter version: 3.32.0
+dependencies:
+  android_intent_plus: ^5.3.0
+  cached_network_image: ^3.4.1
+  carousel_slider: ^5.0.0
+  collection: ^1.19.1
+  cupertino_icons: ^1.0.8
+  dio: ^5.8.0+1
+  file_picker: ^10.1.9
+  flutter:
+    sdk: flutter
+  flutter_cache_manager: ^3.4.1
+  flutter_local_notifications: ^19.3.0
+  flutter_riverpod: ^2.6.1
+  flutter_svg: ^2.1.0
+  font_awesome_flutter: ^10.8.0
+  go_router: ^15.1.2
+  html: any
+  http: ^1.4.0
+  hugeicons: ^0.0.11
+  icons_plus: ^5.0.0
+  lottie: ^3.3.1
+  media_kit: ^1.1.11
+  media_kit_libs_video: ^1.0.5
+  media_kit_video:
+    path: ./media_kit_video
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.0+1
+  pip_view: ^0.9.7
+  platform_detector: ^0.2.0
+  popover: ^0.3.1
+  process: ^5.0.4
+  riverpod: any
+  screen_brightness: ^2.1.4
+  share_plus: ^11.0.0
+  shared_code:
+    path: ./shared_code
+  shared_preferences: ^2.5.3
+  skeletonizer: ^2.0.1
+  sqflite: ^2.4.2
+  sqflite_common_ffi: ^2.3.5
+  url_launcher: ^6.3.1
+  visibility_detector: ^0.4.0+2
+  wakelock_plus: ^1.3.2
+  window_manager: ^0.5.0
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+# The following section is specific to Flutter packages.
+flutter:
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/
+    - assets/rank-svgs/
+    - assets/ranks/
+    - assets/categories/
+    - assets/movies/
+    - assets/logos/
+    - assets/lottie/
+    - assets/lottie/hotstar/
+    - assets/svgs/
+    - assets/ott-list/
+    - assets/nums/pv/
+    - assets/dummy/
+
+    - assets/hotstar/studio-lists/
+    - assets/hotstar/studio-posters/
+    - assets/hotstar/studio-titles/
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package

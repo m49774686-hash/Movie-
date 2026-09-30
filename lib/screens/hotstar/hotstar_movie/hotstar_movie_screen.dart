@@ -1,0 +1,538 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart';
+import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:lottie/lottie.dart';
+import 'package:moviezone/constants.dart';
+import 'package:moviezone/log.dart';
+import 'package:moviezone/models/cache_model.dart';
+import 'package:moviezone/screens/hotstar/hotstar_button.dart';
+import 'package:moviezone/screens/hotstar/opacity_builder.dart';
+import 'package:moviezone/screens/movie_ui_abstract.dart';
+import 'package:moviezone/screens/prime_video/movie_screen/pv_cast_section.dart';
+import 'package:moviezone/screens/prime_video/movie_screen/pv_season_selector_bottom_sheet.dart';
+import 'package:moviezone/utils/nav.dart';
+import 'package:moviezone/widgets/pv_episode_widget.dart';
+import 'package:moviezone/widgets/sticky_header_delegate.dart';
+import 'package:moviezone/widgets/widget_join.dart';
+import 'package:shared_code/models/ott.dart';
+
+class HotstarMovieScreen extends MovieScreenUi {
+  const HotstarMovieScreen(super.id, {super.key});
+
+  @override
+  MovieScreenUiState createState() => _HoststarMovieScreenState();
+}
+
+const l = L("hotstar_movie_screen");
+
+class _HoststarMovieScreenState extends MovieScreenUiState {
+  @override
+  OTT ott = OTT.hotstar;
+  @override
+  bool extraTabForCast = true;
+
+  int tabIndex = 0;
+
+  ScrollController? scrollController;
+
+  // static vars
+  static final bg = Color(0xFF0F1014);
+
+  void handleTabChange(int index) {
+    if (movie!.isShow && tabIndex == 0 && index == 0) {
+      showModalBottomSheet(
+        context: context,
+        builder: (x) {
+          return SeasonSelectorBottomSheet(
+            seasons: movie!.seasons,
+            selectedSeason: seasonNumber,
+            bgClr: const Color(0xFF121212),
+            fontClr: Color(0xFFE2E5F1),
+            selectedBgClr: const Color(0xFFE2E6F1),
+            // selectedBgClr: const Color(0xFF474B51),
+            selectedFontClr: Color.fromARGB(255, 0, 13, 62),
+            onTap: (seasonNum) {
+              handleSeasonChange(seasonNum);
+            },
+          );
+        },
+      );
+    } else {
+      setState(() {
+        tabIndex = index;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return screenBuilder(
+      tabs: [
+        if (movie?.isShow ?? false) buildEpisodes(),
+        buildRelated(),
+        buildCast(),
+      ],
+      appBar: buildAppBar(movie?.title ?? ""),
+      bg: bg,
+      // extendBodyBehindAppBar: true,
+      poster: _buildMoviePoster(),
+      headers: [toSlivers(buildMovieDetails(size)), _buildTabBar()],
+      getController: (controller) {
+        if (scrollController == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                scrollController = controller;
+              });
+            }
+          });
+        }
+      },
+    );
+  }
+
+  List<Widget> movieInfoItems() {
+    if (movie == null) return [];
+    const fontClr = Color(0xFFE2E5F1);
+    const textStyle = TextStyle(color: fontClr, fontSize: 12);
+    const textStyle2 = TextStyle(
+      color: fontClr,
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+    );
+
+    return [
+      Text(movie!.year, style: textStyle2),
+
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        decoration: BoxDecoration(
+          color: Color(0xFF3A3F55),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(movie!.ua, style: textStyle),
+      ),
+
+      if (movie!.runtime != null) Text(movie!.runtime!, style: textStyle2),
+
+      if (movie!.hdsd != null)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(2),
+            border: Border.all(color: Colors.grey),
+          ),
+          child: Text(
+            movie!.hdsd!,
+            style: TextStyle(color: fontClr, fontSize: 10),
+          ),
+        ),
+    ];
+  }
+
+  List<Widget> buildMovieDetails(Size size) {
+    if (movie == null) return [];
+    return [
+      // SizedBox(
+      //   width: 250,
+      //   child: HotstarButton(text: "Watch Now", onPressed: playMovieOrEpisode),
+      // ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: joinWidgets(
+          movieInfoItems(),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6.0),
+            child: Text(Dot, style: TextStyle(color: Color(0xFF8D8D8D))),
+          ),
+        ),
+      ),
+      SizedBox(height: 16),
+
+      buildMainPlayBtn((text) {
+        final progressData = progressValue();
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+
+          child: InkWell(
+            // splashColor: Colors.red,
+            onTap: playMovieOrEpisode,
+            borderRadius: BorderRadius.circular(8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              clipBehavior: Clip.hardEdge,
+              child: Ink(
+                decoration: BoxDecoration(
+                  color: Color(0xFFE2E6F1),
+                  // color: Color.fromARGB(154, 226, 230, 241),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.play_arrow_rounded, color: Colors.black),
+                        SizedBox(width: 5),
+                        Text(
+                          text,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: "Roboto",
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: progressData == null ? 10 : 7.5),
+                    if (progressData != null)
+                      LinearProgressIndicator(
+                        minHeight: 2.5,
+                        value: progressData.$1,
+                        backgroundColor: Color(0xFFBDC1CA),
+                        color: Color(0xFF1492FF),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }),
+      SizedBox(height: 30),
+
+      // Genre Tags
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: SizedBox(
+          width: size.width,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: movie!.genre.mapIndexed((index, genre) {
+                return Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        genre,
+                        style: TextStyle(
+                          color: Color(0xFFe0e4ed),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    // Add gray line separator, but not after the last item
+                    if (index < movie!.genre.length - 1)
+                      Container(
+                        width: 1,
+                        height: 12,
+                        color: Colors.grey.withValues(alpha: 0.7),
+                      ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ),
+
+      SizedBox(height: 8),
+
+      // Movie Description
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Text(
+          movie!.desc,
+          textAlign: TextAlign.justify,
+          style: TextStyle(color: Color(0xFFA5A5A5), fontSize: 12),
+        ),
+      ),
+
+      SizedBox(height: 30),
+      _buildActions(),
+      SizedBox(height: 20),
+    ];
+  }
+
+  Widget _buildTabBar() {
+    // the extra padding, is for, we are using extendBodyBehindAppBar: true,
+    // so it causes it sticks at the top, behind the appbar to fix it added padding at top and increased the height of the sliver header.
+    if (movie == null) return SizedBox();
+    // const toolBarHeight = kToolbarHeight - 5;
+    return SliverPersistentHeader(
+      delegate: StickyHeaderDelegate(
+        minHeight: 40,
+        maxHeight: 60,
+        child: DecoratedBox(
+          // decoration: const BoxDecoration(
+          //   color: Color.fromARGB(255, 132, 153, 238),
+          // ),
+          decoration: const BoxDecoration(color: Color(0xFF0F1014)),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 0),
+            // padding: const EdgeInsets.only(top: toolBarHeight + 20),
+            child: TabBar(
+              controller: tabController,
+              indicatorWeight: 1.0,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicatorColor: Colors.white,
+              labelStyle: const TextStyle(
+                fontSize: 17.0,
+                fontWeight: FontWeight.bold,
+              ),
+              unselectedLabelColor: Colors.grey,
+              labelColor: Colors.white,
+              onTap: handleTabChange,
+              tabs: [
+                if (movie!.isShow)
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "S$seasonNumber E${movie!.getSeason(seasonNumber).ep}",
+                        ),
+                        const SizedBox(width: 5),
+                        const Icon(Icons.expand_more_rounded),
+                      ],
+                    ),
+                  ),
+                if (movie!.suggest.isNotEmpty) const Tab(text: 'Related'),
+                const Tab(text: 'Details'),
+              ],
+            ),
+          ),
+        ),
+      ),
+      pinned: true,
+    );
+  }
+
+  Widget _buildMoviePoster() {
+    final size = MediaQuery.sizeOf(context);
+    // final double paddingTop = Platform.isMacOS
+    //     ? 24
+    //     : MediaQuery.paddingOf(context).top;
+    final double paddingTop = 0;
+    final imgWidth = size.width - 20; // 20 for left and right padding
+    final imgHeight = imgWidth / 1.7766;
+    return SizedBox(
+      width: size.width,
+      child: Padding(
+        padding: EdgeInsets.only(left: 10, right: 10, top: paddingTop),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Movie Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: CachedNetworkImage(
+                imageUrl: OTT.hotstar.getBackdrop(widget.id),
+                cacheManager: NfLargeCacheManager.instance,
+                fit: BoxFit.cover,
+                width: imgWidth,
+                height: imgHeight,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Movie Title Image
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18.0),
+              child: CachedNetworkImage(
+                imageUrl: OTT.hotstar.getImg(widget.id),
+                cacheManager: NfLargeCacheManager.instance,
+                height: 70,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActions() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 28.0),
+      child: Row(
+        spacing: 36,
+        children: [
+          _actionBtn(
+            LottieBuilder.asset(
+              "assets/lottie/hotstar/watchlist_animation_blue.json",
+              // "assets/lottie/my-list-plus-to-check.json",
+              controller: watchlistAnimationController,
+              height: 24,
+              onLoaded: (composition) {
+                // Set initial state based on inWatchlist
+                if (inWatchlist) {
+                  watchlistAnimationController.value = 1.0;
+                } else {
+                  watchlistAnimationController.value = 0.0;
+                }
+              },
+            ),
+            "Watchlist",
+            handleAddWatchlist,
+          ),
+          _actionBtn(
+            _icon(HugeIcons.strokeRoundedDownload05),
+            "Download",
+            downloadMovieOrSeason,
+          ),
+          _actionBtn(
+            _icon(HugeIcons.strokeRoundedShare08),
+            "Share",
+            shareDeepLinkUrl,
+          ),
+          _actionBtn(
+            _icon(HugeIcons.strokeRoundedFavourite, size: 19),
+            "Like",
+            () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionBtn(Widget icon, String label, VoidCallback onPressed) {
+    return InkWell(
+      onTap: onPressed,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          icon,
+          Text(label, style: TextStyle(color: Color(0xFFe0e4ed), fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _icon(IconData icon, {double size = 22}) {
+    return Icon(icon, size: size, color: Color(0xFFe0e4ed));
+  }
+
+  Widget buildEpisodes() {
+    return episodesBuilder((ep, dEp, wEp) {
+      return EpisodeWidget(
+        episode: ep,
+        ott: ott.value,
+        dEpisode: dEp,
+        playEpisode: () => playEpisode(ep.epNum),
+        downloadEpisode: () => downloadEpisode(ep.epNum, seasonNumber),
+        wh: wEp,
+      );
+    });
+  }
+
+  Widget buildRelated() {
+    if (movie == null) return SizedBox();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 0.741,
+          // childAspectRatio: 1.7,
+          crossAxisSpacing: 5,
+          mainAxisSpacing: 5,
+        ),
+        itemCount: movie!.suggest.length,
+        itemBuilder: (context, index) {
+          final id = movie!.suggest[index].id;
+          return GestureDetector(
+            onTap: () {
+              goToMovie(context, ott.id, id);
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: CachedNetworkImage(
+                imageUrl: movie!.ott.getImg(id),
+                cacheManager: PvSmallCacheManager.instance,
+                fit: BoxFit.cover,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  PreferredSizeWidget buildAppBar(final String title) {
+    return ScrollPercentBuilder(
+      maxScroll: 80,
+      minScroll: 30,
+      height: kToolbarHeight - 20,
+      scrollController: scrollController,
+      builder: (opacity) {
+        return AppBar(
+          backgroundColor: bg.withValues(alpha: opacity),
+          // backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          automaticallyImplyLeading: false,
+          titleSpacing: 18,
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: opacity),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close, color: Colors.white),
+                iconSize: 22,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget buildCast() {
+    if (movie == null) return SizedBox();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+            CastSection("Genres", movie!.genreStr ?? ''),
+            CastSection("Director", movie!.director),
+            CastSection("Cast", movie!.cast),
+            CastSection("Maturity rating", movie!.ua),
+            const CastSection(
+              "Viewing rights",
+              "Prime Video: Prime Video titles are available for watching by tapping Watch now if you're an Amazon Prime member. Some Prime Video titles are also available to download. Watcha  downloaded Prime Video title as long as it remains in Prime Video. Additional restrictions apply. Please see the Prime Video Usage Rule for more information.",
+            ),
+            CastSection("Content advisory", movie!.mReason),
+            const CastSection(
+              "Customer reviews",
+              "We don't have any customer reviews.",
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

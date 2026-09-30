@@ -1,0 +1,191 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:moviezone/constants.dart';
+import 'package:moviezone/data/options.dart';
+import 'package:moviezone/db/db.dart';
+import 'package:moviezone/downloader/downloader.dart';
+import 'package:moviezone/log.dart';
+import 'package:moviezone/routes.dart';
+import 'package:moviezone/widgets/ott_drawer.dart';
+import 'package:window_manager/window_manager.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize MediaKit for video playback
+  MediaKit.ensureInitialized();
+  L.only = [];
+  L.logLevel = LogLevel.debug;
+  // L.stackStrace = true;
+
+  if (isDesk) {
+    await windowManager.ensureInitialized();
+    const WindowOptions windowOptions = WindowOptions(
+      size: Size(400, 720),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.hidden,
+      title: 'MovieZone',
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
+  // if (isDesk) {
+  //   databaseFactory = databaseFactoryFfi;
+  // }
+
+  await DB.instance.database;
+  Downloader.instance;
+
+  // if (!isDesk) {
+  //   await Workmanager().initialize(
+  //     callbackDispatcher,
+  //     isInDebugMode: true,
+  //   );
+  // }
+
+  runApp(ProviderScope(overrides: [], child: MainApp()));
+}
+
+const themeColor = Color.fromARGB(255, 171, 109, 105);
+final darkScheme = ColorScheme.fromSeed(
+  seedColor: themeColor,
+  brightness: Brightness.dark,
+);
+
+class MainApp extends StatefulWidget {
+  const MainApp({super.key});
+
+  @override
+  State<MainApp> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(handleKeyEvent);
+    // WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(handleKeyEvent);
+    super.dispose();
+  }
+
+  bool handleKeyEvent(KeyEvent e) {
+    if (e is! KeyDownEvent) return false;
+    final hk = HardwareKeyboard.instance;
+    final lk = e.logicalKey;
+    final isMeta = Platform.isMacOS ? hk.isMetaPressed : hk.isControlPressed;
+    final ottIndex = getOttIndexFromRoute(SettingsOptions.currentScreen);
+
+    if (lk == LogicalKeyboardKey.escape) {
+      routes.pop();
+      return true;
+    } else if (lk == LogicalKeyboardKey.arrowLeft &&
+        isMeta &&
+        !hk.isAltPressed) {
+      routes.pop();
+      return true;
+    } else if (lk == LogicalKeyboardKey.comma && isMeta) {
+      routes.push("/settings");
+      return true;
+    } else if (lk == LogicalKeyboardKey.keyJ && isMeta) {
+      routes.push("/downloads");
+      return true;
+    } else if (lk == LogicalKeyboardKey.keyF && isMeta) {
+      routes.push("/search/$ottIndex");
+      return true;
+    } else if (lk == LogicalKeyboardKey.keyH && isMeta) {
+      routes.push("/history");
+      return true;
+    } else if (lk == LogicalKeyboardKey.keyU && isMeta) {
+      routes.push("/profile");
+      return true;
+    }
+    return false;
+  }
+
+  // @override
+  // void didChangeAppLifecycleState(AppLifecycleState state) async {
+  //   log("============== App State: $state ==============");
+  //   if (state == AppLifecycleState.detached ||
+  //       state == AppLifecycleState.paused) {
+  // pauseFlags.updateAll((key, value) => true);
+
+  // runs when app closed
+  // DownloadHelper.instance.continueDownloadAfterAppOpen();
+  // log("Ids: $ids");
+  // log("App closed");
+  // Workmanager().registerOneOffTask(
+  //   "downloadTask",
+  //   "downloadTask",
+  //   // inputData: {"downloadId": ids[0]},
+  //   existingWorkPolicy: ExistingWorkPolicy.replace,
+  // );
+  // }
+  // }
+
+  final theme = ThemeData(
+    useMaterial3: true,
+    colorScheme: darkScheme,
+    appBarTheme: AppBarTheme(
+      toolbarHeight: isDesk ? 28 : 48,
+      centerTitle: false,
+      titleTextStyle: TextStyle(fontSize: isDesk ? 14 : 20),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return Colors.white;
+        }
+        return Colors.grey;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return Colors.white.withValues(alpha: 0.6);
+        }
+        return Colors.grey.withValues(alpha: 0.5);
+      }),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      key: GlobalKey(),
+      debugShowCheckedModeBanner: false,
+      title: 'MovieZone',
+      darkTheme: theme,
+      theme: theme,
+      routerConfig: routes,
+    );
+  }
+}
+
+// @pragma('vm:entry-point')
+// void callbackDispatcher() {
+//   Workmanager().executeTask((task, inputData) async {
+//     if (task == "downloadTask") {
+//       logger.f("Download task started");
+//       final ids = await DownloadDb.instance.downloadingIds();
+//       // final downloadId = inputData!["downloadId"]! as int;
+//       await DownloadDb.instance.processDownload(ids[0]);
+//       // await DownloadHelper.instance.continueDownloadAfterAppOpen();
+//       return true;
+//     }
+//     return true;
+//   });
+// }
